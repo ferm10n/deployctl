@@ -86,8 +86,15 @@ jobs:
         with:
           project: happy-rat-64
           root: action/tests
-          entrypoint: hello.ts
+          entrypoint: env_test.ts
           env: |
             TEST_VAR=hello
             API_URL=https://api.example.com
             DEBUG=true
+      - name: Deploy with comma-separated environment variables
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action/tests
+          entrypoint: env_test.ts
+          env: TEST_VAR=comma_test,NODE_ENV=production

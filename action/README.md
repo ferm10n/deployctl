@@ -15,6 +15,7 @@ GitHub Actions for deploying to Deno Deploy.
   - [Filter content with `include` and `exclude`](#filter-content-with-include-and-exclude)
   - [Use external or absolute path as an entrypoint](#use-external-or-absolute-path-as-an-entrypoint)
   - [Use import map](#use-import-map)
+  - [Set environment variables](#set-environment-variables)
 
 ## Usage
 
@@ -78,6 +79,12 @@ jobs:
     # Must be relative to root directory
     # Optional.
     import-map:
+
+    # Environment variables for the deployment
+    # Supports KEY=VALUE format, single environment variable per line
+    # It supports multiple variables separated by a comma or by a newline
+    # Optional.
+    env:
 ```
 
 ## Examples
@@ -180,4 +187,41 @@ You can specify an [import map](https://github.com/WICG/import-maps).
     project: my-project
     entrypoint: main.ts
     import-map: path/to/import-map.json
+```
+
+### Set environment variables
+
+You can set environment variables for your deployment, which will be available via `Deno.env.get()` in your application.
+
+```yaml
+- name: Deploy to Deno Deploy
+  uses: denoland/deployctl@v1
+  with:
+    project: my-project
+    entrypoint: main.ts
+    env: |
+      API_URL=https://api.example.com
+      DEBUG=true
+      VERSION=1.0.0
+```
+
+You can set a single environment variable:
+
+```yaml
+env: API_URL=https://api.example.com
+```
+
+multiple variables separated by a comma:
+
+```yaml
+env: API_URL=https://api.example.com,DEBUG=true
+```
+
+or separated by a newline:
+
+```yaml
+env: |
+  API_URL=https://api.example.com
+  DEBUG=true
+  VERSION=1.0.0
 ```
