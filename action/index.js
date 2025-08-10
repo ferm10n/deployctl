@@ -15,13 +15,45 @@ import process from "node:process";
 // The origin of the server to make Deploy requests to.
 const ORIGIN = process.env.DEPLOY_API_ENDPOINT ?? "https://dash.deno.com";
 
+// Parse environment variables from env input (KEY=VALUE format)
+function parseEnvVars(envInput) {
+  if (!envInput || envInput.length === 0) {
+    return null;
+  }
+  
+  const envVars = {};
+  const envLines = envInput.flatMap((line) => line.split(",")).map((line) => line.trim()).filter(Boolean);
+  
+  for (const line of envLines) {
+    const equalIndex = line.indexOf("=");
+    if (equalIndex === -1) {
+      throw new Error(`Invalid environment variable format: ${line}. Expected KEY=VALUE format.`);
+    }
+    const key = line.slice(0, equalIndex).trim();
+    const value = line.slice(equalIndex + 1);
+    if (!key) {
+      throw new Error(`Invalid environment variable format: ${line}. Key cannot be empty.`);
+    }
+    envVars[key] = value;
+  }
+  
+  return Object.keys(envVars).length > 0 ? envVars : null;
+}
+
 async function main() {
   const projectId = core.getInput("project", { required: true });
   const entrypoint = core.getInput("entrypoint", { required: true });
   const importMap = core.getInput("import-map", {});
   const include = core.getMultilineInput("include", {});
   const exclude = core.getMultilineInput("exclude", {});
+  const env = core.getMultilineInput("env", {});
   const cwd = resolve(process.cwd(), core.getInput("root", {}));
+
+  // Parse environment variables
+  const envVars = parseEnvVars(env);
+  if (envVars) {
+    core.info(`Environment variables: ${Object.keys(envVars).join(", ")}`);
+  }
 
   if (github.context.eventName === "pull_request") {
     const pr = github.context.payload.pull_request;
@@ -155,8 +187,37 @@ async function main() {
     }
   }
 
+  // Handle environment variables if provided
+  if (envVars && deployment) {
+    core.info("Setting environment variables...");
+    try {
+      const originalDeploymentId = deployment.id;
+      const redeployed = await api.redeployDeployment(originalDeploymentId, {
+        prod: false, // GitHub actions deployments are typically preview deployments
+        env_vars: envVars,
+      });
+      if (redeployed) {
+        // Update deployment reference and domains
+        deployment = redeployed;
+        core.info("Environment variables set successfully.");
+        core.info("\nUpdated deployment view at:");
+        for (const { domain } of redeployed.domains) {
+          core.info(` - https://${domain}`);
+        }
+        // Clean up the original deployment without env vars
+        await api.deleteDeployment(originalDeploymentId);
+      }
+    } catch (error) {
+      core.warning(`Failed to set environment variables: ${error}`);
+      // Continue with the original deployment
+    }
+  }
+
   core.setOutput("deployment-id", deployment.id);
-  const domain = deployment.domainMappings[0].domain;
+  // Handle different domain structure based on deployment type
+  const domain = deployment.domainMappings 
+    ? deployment.domainMappings[0].domain 
+    : deployment.domains[0];
   core.setOutput("url", `https://${domain}/`);
 }
 

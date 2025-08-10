@@ -81,3 +81,13 @@ jobs:
           project: happy-rat-64
           root: action/tests
           entrypoint: "data:,Deno.serve(() => new Response())"
+      - name: Deploy with environment variables
+        uses: ./
+        with:
+          project: happy-rat-64
+          root: action/tests
+          entrypoint: hello.ts
+          env: |
+            TEST_VAR=hello
+            API_URL=https://api.example.com
+            DEBUG=true

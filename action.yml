@@ -25,6 +25,9 @@ inputs:
   root:
     description: The path to the directory containing the code and assets to upload
     required: false
+  env:
+    description: Environment variables to set for the deployment in KEY=VALUE format (multiline and/or comma-separated)
+    required: false
 
 outputs:
   deployment-id:
