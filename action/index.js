@@ -151,8 +151,12 @@ async function main() {
     importMapUrl: importMapUrl?.href ?? null,
     manifest,
     event: github.context.payload,
-    env_vars: envVars,
   };
+  
+  // Try to include env vars in initial request if supported by API
+  if (envVars) {
+    req.env_vars = envVars;
+  }
   const progress = await api.gitHubActionsDeploy(projectId, req, files);
   let deployment;
   for await (const event of progress) {
@@ -182,6 +186,33 @@ async function main() {
         break;
       case "error":
         throw event.ctx;
+    }
+  }
+
+  // Handle environment variables if not set during initial deployment
+  // Note: This is a fallback while Deno Deploy API may not support env vars in GitHub Actions deployments
+  if (envVars && deployment && !deployment.envVars?.length) {
+    core.info("Setting environment variables...");
+    try {
+      const originalDeploymentId = deployment.id;
+      const redeployed = await api.redeployDeployment(originalDeploymentId, {
+        prod: false, // GitHub actions deployments are typically preview deployments
+        env_vars: envVars,
+      });
+      if (redeployed) {
+        // Update deployment reference and domains
+        deployment = redeployed;
+        core.info("Environment variables set successfully.");
+        core.info("\nUpdated deployment view at:");
+        for (const { domain } of redeployed.domains) {
+          core.info(` - https://${domain}`);
+        }
+        // Clean up the original deployment without env vars
+        await api.deleteDeployment(originalDeploymentId);
+      }
+    } catch (error) {
+      core.warning(`Failed to set environment variables: ${error}`);
+      // Continue with the original deployment
     }
   }
 
