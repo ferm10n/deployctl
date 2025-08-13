@@ -51,9 +51,6 @@ async function main() {
 
   // Parse environment variables
   const envVars = parseEnvVars(env);
-  if (envVars) {
-    core.info(`Environment variables: ${Object.keys(envVars).join(", ")}`);
-  }
 
   if (github.context.eventName === "pull_request") {
     const pr = github.context.payload.pull_request;
@@ -154,6 +151,7 @@ async function main() {
     importMapUrl: importMapUrl?.href ?? null,
     manifest,
     event: github.context.payload,
+    env_vars: envVars,
   };
   const progress = await api.gitHubActionsDeploy(projectId, req, files);
   let deployment;
@@ -184,32 +182,6 @@ async function main() {
         break;
       case "error":
         throw event.ctx;
-    }
-  }
-
-  // Handle environment variables if provided
-  if (envVars && deployment) {
-    core.info("Setting environment variables...");
-    try {
-      const originalDeploymentId = deployment.id;
-      const redeployed = await api.redeployDeployment(originalDeploymentId, {
-        prod: false, // GitHub actions deployments are typically preview deployments
-        env_vars: envVars,
-      });
-      if (redeployed) {
-        // Update deployment reference and domains
-        deployment = redeployed;
-        core.info("Environment variables set successfully.");
-        core.info("\nUpdated deployment view at:");
-        for (const { domain } of redeployed.domains) {
-          core.info(` - https://${domain}`);
-        }
-        // Clean up the original deployment without env vars
-        await api.deleteDeployment(originalDeploymentId);
-      }
-    } catch (error) {
-      core.warning(`Failed to set environment variables: ${error}`);
-      // Continue with the original deployment
     }
   }
 

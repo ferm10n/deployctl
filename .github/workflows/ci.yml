@@ -46,7 +46,9 @@ jobs:
 
       - name: Typecheck
         if: runner.os == 'Linux' && matrix.deno == 'stable'
-        run: deno check deployctl.ts
+        run: |
+          deno check deployctl.ts
+          deno check action/index.js
 
       # Skip temporarily (see https://github.com/denoland/deployctl/actions/runs/11500790181/job/32011870448?pr=342#step:8:148)
       # - name: action/deps.js up-to-date

@@ -132,6 +132,7 @@ export interface GitHubActionsDeploymentRequest {
   importMapUrl: string | null;
   manifest: { entries: Record<string, ManifestEntry> };
   event?: unknown;
+  env_vars?: Record<string, string>;
 }
 
 export type DeploymentProgress =
